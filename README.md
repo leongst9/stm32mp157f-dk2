@@ -22,17 +22,17 @@ OpenAMP communication between the Cortex‑A7 (Linux) and Cortex-M4 (firmware) c
 2. Copy the generated ELF to your Linux board via powershell:
    ```bash
    scp Debug/MPU1_CM4.elf root@<board-ip>:/lib/firmware/
-  ```
-- From step 3 onwards, execute it in the SSH/serial terminal connected via usb-eth or serial port on the board
-3. Specify the firmware (copy your .elf to /lib/firmware/ first)
+   ```
+3. From step 3 onwards, execute it in the SSH/serial terminal connected via usb-eth or serial port on the board. 
+Specify the firmware (copy your .elf to /lib/firmware/ first)
 	```bash
 	echo MPU1_CM4.elf > /sys/class/remoteproc/remoteproc0/firmware
 	```
 4. Start the process and check if it is running
-  ```bash
-  echo start > /sys/class/remoteproc/remoteproc0/state
-  dmesg | grep -E "rpmsg|virtio|remoteproc|ttyRPMSG"
-  ```
+    ```bash
+    echo start > /sys/class/remoteproc/remoteproc0/state
+    dmesg | grep -E "rpmsg|virtio|remoteproc|ttyRPMSG"
+   ```
 5. Send some strings and see the echo with another terminal
 	(I used teraterm to open one via SSH and another via serial port)
 	```bash
