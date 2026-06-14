@@ -66,7 +66,7 @@
    */
 
 #ifdef VIRTUAL_UART_MODULE_ENABLED
-//#include "virt_uart.h"
+#include "virt_uart.h"
 #endif /* VIRTUAL_UART_MODULE_ENABLED */
 
 #ifdef VIRTUAL_I2C_MODULE_ENABLED

@@ -23,7 +23,7 @@ OpenAMP communication between the Cortex‑A7 (Linux) and Cortex-M4 (firmware) c
    ```bash
    scp Debug/MPU1_CM4.elf root@<board-ip>:/lib/firmware/
   ```
-From step 3 onwards, execute it in the SSH/serial terminal connected via usb-eth or serial port on the board
+- From step 3 onwards, execute it in the SSH/serial terminal connected via usb-eth or serial port on the board
 3. Specify the firmware (copy your .elf to /lib/firmware/ first)
 	```bash
 	echo MPU1_CM4.elf > /sys/class/remoteproc/remoteproc0/firmware

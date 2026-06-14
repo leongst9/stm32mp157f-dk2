@@ -32,6 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define MAX_BUFFER_SIZE RPMSG_BUFFER_SIZE
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,7 +43,20 @@
 /* Private variables ---------------------------------------------------------*/
 IPCC_HandleTypeDef hipcc;
 
+IPCC_HandleTypeDef hipcc;
+
+
 /* USER CODE BEGIN PV */
+VIRT_UART_HandleTypeDef huart0;
+VIRT_UART_HandleTypeDef huart1;
+
+__IO FlagStatus VirtUart0RxMsg = RESET;
+uint8_t VirtUart0ChannelBuffRx[MAX_BUFFER_SIZE];
+uint16_t VirtUart0ChannelRxSize = 0;
+
+__IO FlagStatus VirtUart1RxMsg = RESET;
+uint8_t VirtUart1ChannelBuffRx[MAX_BUFFER_SIZE];
+uint16_t VirtUart1ChannelRxSize = 0;
 
 /* USER CODE END PV */
 
@@ -50,11 +64,12 @@ IPCC_HandleTypeDef hipcc;
 void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
 static void MX_IPCC_Init(void);
+static void MX_DMA_Init(void);
 int MX_OPENAMP_Init(int RPMsgRole, rpmsg_ns_bind_cb ns_bind_cb);
 /* USER CODE BEGIN PFP */
-
+void VIRT_UART0_RxCpltCallback(VIRT_UART_HandleTypeDef *huart);
+void VIRT_UART1_RxCpltCallback(VIRT_UART_HandleTypeDef *huart);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -69,7 +84,7 @@ int MX_OPENAMP_Init(int RPMsgRole, rpmsg_ns_bind_cb ns_bind_cb);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	unsigned int counter = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -95,7 +110,7 @@ int main(void)
   else
   {
     /* IPCC initialisation */
-    MX_IPCC_Init();
+     MX_IPCC_Init();
     /* OpenAmp initialisation ---------------------------------*/
     MX_OPENAMP_Init(RPMSG_REMOTE, NULL);
   }
@@ -109,6 +124,24 @@ int main(void)
   MX_DMA_Init();
   /* USER CODE BEGIN 2 */
 
+    if (VIRT_UART_Init(&huart0) != VIRT_UART_OK) {
+
+      Error_Handler();
+    }
+
+    if (VIRT_UART_Init(&huart1) != VIRT_UART_OK) {
+
+      Error_Handler();
+    }
+  /*Need to register callback for message reception by channels*/
+    if(VIRT_UART_RegisterCallback(&huart0, VIRT_UART_RXCPLT_CB_ID, VIRT_UART0_RxCpltCallback) != VIRT_UART_OK)
+    {
+     Error_Handler();
+    }
+    if(VIRT_UART_RegisterCallback(&huart1, VIRT_UART_RXCPLT_CB_ID, VIRT_UART1_RxCpltCallback) != VIRT_UART_OK)
+    {
+      Error_Handler();
+    }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -116,7 +149,23 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  OPENAMP_check_for_message();
 
+	  /* USER CODE END WHILE */
+	  if (VirtUart0RxMsg) {
+		VirtUart0RxMsg = RESET;
+		if (VirtUart0ChannelRxSize != 0)
+			VIRT_UART_Transmit(&huart0, VirtUart0ChannelBuffRx, VirtUart0ChannelRxSize);
+	  }
+
+	  if (VirtUart1RxMsg) {
+		VirtUart1RxMsg = RESET;
+		VIRT_UART_Transmit(&huart1, VirtUart1ChannelBuffRx, VirtUart1ChannelRxSize);
+	  }
+
+	  if(counter++ == 500000) {
+		  counter = 0;
+	  }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -144,8 +193,10 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS_DIG;
   RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = 16;
   RCC_OscInitStruct.HSIDivValue = RCC_HSI_DIV1;
   RCC_OscInitStruct.CSIState = RCC_CSI_ON;
+  RCC_OscInitStruct.CSICalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   RCC_OscInitStruct.PLL2.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL2.PLLSource = RCC_PLL12SOURCE_HSE;
@@ -278,7 +329,25 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void VIRT_UART0_RxCpltCallback(VIRT_UART_HandleTypeDef *huart)
+{
 
+
+    /* copy received msg in a variable to sent it back to master processor in main infinite loop*/
+    VirtUart0ChannelRxSize = huart->RxXferSize < MAX_BUFFER_SIZE? huart->RxXferSize : MAX_BUFFER_SIZE-1;
+    memcpy(VirtUart0ChannelBuffRx, huart->pRxBuffPtr, VirtUart0ChannelRxSize);
+    VirtUart0RxMsg = SET;
+}
+
+void VIRT_UART1_RxCpltCallback(VIRT_UART_HandleTypeDef *huart)
+{
+
+
+    /* copy received msg in a variable to sent it back to master processor in main infinite loop*/
+    VirtUart1ChannelRxSize = huart->RxXferSize < MAX_BUFFER_SIZE? huart->RxXferSize : MAX_BUFFER_SIZE-1;
+    memcpy(VirtUart1ChannelBuffRx, huart->pRxBuffPtr, VirtUart1ChannelRxSize);
+    VirtUart1RxMsg = SET;
+}
 /* USER CODE END 4 */
 
 /**
